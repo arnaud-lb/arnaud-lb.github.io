@@ -1,0 +1,71 @@
+---
+layout: post
+title:  "Finding memory leaks in PHP"
+date:   2019-06-18 15:57:36 +0200
+categories: php memprof
+---
+
+A PHP script whose memory usage increases over time might have a memory leak. I've created [memprof](https://github.com/arnaud-lb/php-memory-profiler), a memory profiler for PHP, in order to find them.
+
+### Memory leaks in PHP
+
+In PHP, memory management is automatic, so leaking memory should be rare. However, it can still happen in a few cases:
+
+ - When using unbounded in-process caches, especially when caching in static properties. The cache can grow uncontrollably and consume a lot of memory.
+ - When the code creates reference cycles and the garbage collector is disabled. PHP relies on reference counting to free unreferenced values. However, values can get caught in a reference cycle when they reference each other. In this case, only the garbage collector can eventually free them.
+
+### Memory profilers
+
+[Blackfire](https://blackfire.io) is my go-to PHP profiler, however it does not track freed memory. The memory profile only shows the total allocated memory, not the unfreed/leaked one, so it's not as useful as it could be for finding memory leaks.
+
+[XDebug](https://xdebug.org/) used to have a memory profiler, but it suffers from the same problem.
+
+### Introducing memprof
+
+[Memprof](https://github.com/arnaud-lb/php-memory-profiler) is a memory profiler extension for PHP that focuses on leaks: It reports the amount of unfreed memory, and where it was allocated. Its usage is pretty simple:
+
+1. Call `memprof_enable()` near the beginning of a program
+2. Call one of the `memprof_dump_` functions to dump the current state of the program's memory.
+3. Use a tool to visualise the result, such as google perf tools or kcachegrind/qcachegring.
+
+### Installation
+
+1. Install libjudy. On Ubuntu this can be done by running `sudo apt-get install libjudy-dev`
+2. Install memprof: `sudo pecl install memprof`
+3. Add `extension=memprof.so` in your `php.in` (or run `php` with `-dextension=memprof.so`)
+
+#### QCachegrind / KCachegrind installation
+
+KCachegrind can be used to visualise the memprof dumps.
+
+QCachegrind is a pure-Qt port that can be used on MacOS or Windows.
+
+- On Ubuntu: `sudo apt-get install kcachegrind`
+- On MacOS: `brew install qcachegrind`
+
+### Example usage
+
+Let's take an hypothetic program that uses an `Integer` class to represent integers, and that keeps a cache of instantiated integers: [https://gist.github.com/arnaud-lb/9240d85262e07bc1fb03199098ab04db](https://gist.github.com/arnaud-lb/9240d85262e07bc1fb03199098ab04db).
+
+It uses an unbounded cache, so it consumes more and more memory over time. Let's pretend that the program is larger and that the location of the memory leak is less obvious.
+
+We have instrumented the program like this:
+
+- We execute `memprof_enable()` near the start of the program
+- We execute `memprof_dump_callgrind()` before the end of the program, when the memory usage it high, to dump the profile in a format understood by qcachegrind/kcachegrind
+
+We can run this script like this: `php -dextension=memprof.so leak.php`.
+
+Finally, we can open the dump file with kcachegrind/qcachegrind (`dump`, in the current directory).
+
+### Overhead
+
+Memprof has zero overhead before calling `memprof_enable()`, so I personnally enable it by default on my dev boxes.
+
+Once profiling is enabled with `memprof_enable()`, there is some memory overhead, so expect to increase the memory limit a little when profiling.
+
+### Going further
+
+Memprof is documented in its [README](https://github.com/arnaud-lb/php-memory-profiler/blob/master/README.md).
+
+Also take a look at [meminfo](https://github.com/BitOne/php-meminfo), a powerful extension that can be used to explore the memory of a PHP process.
