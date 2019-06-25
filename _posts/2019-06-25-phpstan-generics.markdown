@@ -2,15 +2,8 @@
 layout: post
 title:  "PHPStan Generics"
 date:   2019-06-25 10:56:00 +0200
-categories: phpstan php generics
+tags: phpstan php generics
 ---
-
-> This post discusses a work in progress.  
->
-> Current status:  
-> ☑︎ Generic functions  
-> ☐ Generic classes  
-> ☐ class-string<T>, T::class
 
 Typing is a great way to document code, to detect some programming errors statically, and to be more confident when refactoring.
 
@@ -39,32 +32,6 @@ function f($x) {
 
 f(1); // PHPStan knows that this returns a int
 f(new DateTime()); // PHPStan knows that this returns a DateTime
-```
-
-#### Propagation
-
-Template types propagate themselves when passing them from one generic code to an other generic code:
-
-``` php
-<?php
-
-/**
- * @template T // Declares one template type named T 
- * @param T $x // Declares that the type of $x is T
- * @return T
- */
-function f($x) {
-    return g($x); // Returns U, which is a T
-}
-
-/**
- * @template U
- * @param U $x
- * @return U
- */
-function g($x) {
-    return $x;
-}
 ```
 
 #### Bounds
@@ -139,6 +106,32 @@ function example($a, $b, $c, $d) {
 }
 ```
 
+#### Propagation
+
+Template types propagate themselves when passing them from one generic code to an other generic code:
+
+``` php
+<?php
+
+/**
+ * @template T // Declares one template type named T 
+ * @param T $x // Declares that the type of $x is T
+ * @return T
+ */
+function f($x) {
+    return g($x); // Returns U, which is a T
+}
+
+/**
+ * @template U
+ * @param U $x
+ * @return U
+ */
+function g($x) {
+    return $x;
+}
+```
+
 ### class-string&lt;T&gt;, T::class
 
 Generic typing can also work with string class names, like this:
@@ -171,7 +164,7 @@ function instance(string $className) {
 instance("DateTime"); // returns a DateTime
 ```
 
-Note: Implementation is in progress
+> Note: Implementation of this feature is in progress
 
 ### Classes
 
@@ -213,7 +206,7 @@ $coll->add(""); // Error
 $coll->get(0); // int
 ```
 
-Note: implementation is in progress
+> Note: Implementation of this feature is in progress
 
 ### Interfaces, inheritance
 
@@ -255,7 +248,7 @@ $coll = new ArrayCollection([1,2,3]);
 first($coll); // int
 ```
 
-Note: implementation is in progress.
+> Note: Implementation of this feature is in progress
 
 ### Variance
 
