@@ -117,8 +117,8 @@ first([1,2,3]); // returns a int|null
  * @template T
  * @param callable(T): T $a
  * @param T[] $b
- * @param iterable<T> $c // Note: implementation in progress
- * @param array{a: T, b: T} $d // Note: implementation in progress
+ * @param iterable<T> $c
+ * @param array{a: T, b: T} $d
  * @return T|null
  */
 function example($a, $b, $c, $d) {
