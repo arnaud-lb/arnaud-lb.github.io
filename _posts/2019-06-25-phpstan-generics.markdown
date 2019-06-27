@@ -270,6 +270,7 @@ first($coll); // int
 
 > Note: Implementation of this feature is in progress
 
+{::comment}
 #### Variance
 
 Variance defines how a type can be substituted while maintaining type safety.
@@ -381,6 +382,7 @@ $f($coll); // Not OK, because f() sees $coll as a Collection<B>, although
 As can be seen in this example, allowing variance in template types would not be type safe.
 
 There are ways for a type system to allow variance selectively; this is a planned feature.
+{:/comment}
 
 ### Examples
 
