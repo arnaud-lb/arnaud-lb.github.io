@@ -50,7 +50,7 @@ Current state in master:
 - Variance: WIP
 - Prefixed annotations: WIP
 
-Get informed on the progress by following [me](https://twitter.com/arnaud_lb), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
+Get informed on the progress by following [@arnaud_lb](https://twitter.com/arnaud_lb) (me), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
 
 ### Features
 
@@ -473,7 +473,7 @@ Also thanks to [Matt Brown](https://twitter.com/mattbrowndev), author of Psalm, 
 
 ### Stay tuned
 
-Get informed as we progress on generics by following [me](https://twitter.com/arnaud_lb), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
+Get informed as we progress on generics by following [@arnaud_lb](https://twitter.com/arnaud_lb) (me), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
 
 [PHPStan]: https://github.com/phpstan/phpstan
 [playground]: https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76
