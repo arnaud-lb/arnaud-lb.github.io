@@ -7,13 +7,13 @@ tags: phpstan php generics
 
 Typing is a great way to document code, to detect some programming errors statically, and to be more confident when refactoring.
 
-PHPStan allows to check the types in a program, and to report any typing issue. However, there is a limit: when re-using the same code with different types (like using different Collection instances with different types), we can not type our code, and we lose PHPStan's type checking.
+[PHPStan][PHPStan] allows to check the types in a program, and to report any typing issue. However, there is a limit: when re-using the same code with different types (like using different Collection instances with different types), we can not type our code, and we lose PHPStan's type checking.
 
 ### Introducing generic typing
 
 Generic typing makes it possible to re-use the same piece of code with different types, while still making it statically type safe.
 
-The idea is to declare one or more types as _templates_ on a function or class. Then, use them as parameter types or return types. PHPStan will determine the real type of the templates by looking at the call site of the function, or the instantiation site of the class. It will then make sure that we use the right types consistently.
+The idea is to declare one or more types as _templates[^1]_ on a function or class. Then, use them as parameter types or return types. PHPStan will determine the real type of the templates by looking at the call site of the function, or the instantiation site of the class. It will then make sure that we use the right types consistently.
 
 In the following example, we declare one template type named `T`, and use it on one parameter and the return value. When calling `f()`, PHPStan determines the real type of `T` from the passed arguments. In this example, one effect of generic typing is that the return type of `f()` is known, so using the return value is safer. 
 
@@ -33,6 +33,26 @@ function f($x) {
 f(1); // PHPStan knows that this returns a int
 f(new DateTime()); // PHPStan knows that this returns a DateTime
 ```
+
+### Generics in PHPStan
+
+Because generics and PHPStan are so awesome, I've been working on adding the former to the later during the past weeks, with the help of PHPStan's author Ondřej Mirtes, and the feedbacks of Psalm's author Matt Brown.
+
+If you install the master version of phpstan, or if you use the [playground][playground], you will be able to have a preview of generics in PHPStan.
+
+Current state in master:
+
+- Generic functions: done
+- Generic closures: WIP
+- Generic classes: WIP
+- non-classname bounds: WIP
+- class-string<T>, T::class: WIP
+- Variance: WIP
+- Prefixed annotations: WIP
+
+Get informed on the progress by following [me](htts://twitter.com/arnaud_lb), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
+
+### Features
 
 #### Bounds
 
@@ -66,7 +86,7 @@ f(new DateTimeImmutable("yesterday"), new DateTimeImmutable("now")); // returns 
 f(1, 2); // error: int is not a sub type of DateTimeInterface
 ```
 
-### Nested types
+#### Nested types
 
 Template types can be used as standalone types or as embedded types, such as in arrays, callables, iterables, etc.
 
@@ -132,7 +152,7 @@ function g($x) {
 }
 ```
 
-### class-string&lt;T&gt;, T::class
+#### class-string&lt;T&gt;, T::class
 
 Generic typing can also work with string class names, like this:
 
@@ -166,7 +186,7 @@ instance("DateTime"); // returns a DateTime
 
 > Note: Implementation of this feature is in progress
 
-### Classes
+#### Classes
 
 Generic typing shows its full value when using classes. Like functions, it is possible to declare a template type on a class, and to use this type anywhere in the class definition (properties, parameters, return types).
 
@@ -208,7 +228,7 @@ $coll->get(0); // int
 
 > Note: Implementation of this feature is in progress
 
-### Interfaces, inheritance
+#### Interfaces, inheritance
 
 When implementing a generic interface, it is possible to specify its template types by using the `@implements` annotation:
 
@@ -250,11 +270,11 @@ first($coll); // int
 
 > Note: Implementation of this feature is in progress
 
-### Variance
+#### Variance
 
 Variance defines how a type can be substituted while maintaining type safety.
 
-#### Covariance
+##### Covariance
 
 Covariance is when a type can be substituted by itself or any of its subtypes.
 
@@ -280,7 +300,7 @@ f(function (): C { return new C(); }); // OK
 f(function (): A { return new A(); }); // Not allowed
 ```
 
-#### Contravariance
+##### Contravariance
 
 Contravariance is when a type can be substituted by itself or any of its supertypes.
 
@@ -305,11 +325,11 @@ f(function (B $a) {}); // OK
 f(function (C $a) {}); // Not allowed
 ```
 
-#### Invariance
+##### Invariance
 
 Invariance is when a type can be substituted only by itself.
 
-#### Variance in generics
+##### Variance in generics
 
 A class can be seen as a collection of callables who follow the same rules as explain above: Each method is covariant on its parameter types, and contravariant on its return type.
 
@@ -362,8 +382,97 @@ As can be seen in this example, allowing variance in template types would not be
 
 There are ways for a type system to allow variance selectively; this is a planned feature.
 
+### Examples
+
+#### map()
+
+``` php
+<?php
+
+/**
+ * @template K The key type
+ * @template V The input value type
+ * @template V2 The output value type
+ *
+ * @param iterable<K, V> $iterable
+ * @param callable(V): V2 $callback
+ *
+ * @return array<K, V2>
+ */
+function map($iterable, $callback) {
+    $result = [];
+    foreach ($iterable as $k => $v) {
+        $result[$k] = $callback($v);
+    }
+    return $result;
+}
+```
+
+Try it [here](https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76).
+
+#### reduce()
+
+``` php
+<?php
+
+/**
+ * @template V The input value type
+ * @template V2 The output value type
+ *
+ * @param iterable<V> $iterable
+ * @param callable(V2, V): V2 $callback
+ * @param V2 $initial
+ *
+ * @return V2
+ */
+function reduce($iterable, $callback, $initial) {
+    $result = $initial;
+    foreach ($iterable as $v) {
+        $result = $callback($result, $v);
+    }
+    return $result;
+}
+```
+
+Try it [here](https://phpstan.org/r/404f20ed-ce1f-4e87-bdad-2385668d569b).
+
+#### first()
+
+``` php
+<?php
+
+/**
+ * @template V The input value type
+ *
+ * @param iterable<V> $iterable
+ * @param callable(V): bool $callback
+ *
+ * @return V|null
+ */
+function first($iterable, $callback) {
+    foreach ($iterable as $v) {
+        if ($callback($v)) {
+            return $v;
+        }
+    }
+    return null;
+}
+```
+
+Try it [here](https://phpstan.org/r/954e1c55-a5e6-498a-9b05-37f7cde64783).
+
 ### Acknowlegements
 
-Thanks to [Mention](https://mention.com) for letting me work on this feature. BTW, Mention is [hiring](https://mention.workable.com/).
+PHPStan is awesome, thanks to its author [Ondřej Mirtes](https://twitter.com/ondrejmirtes) and [contributors](https://github.com/phpstan/phpstan/graphs/contributors).
 
-Thanks to [Ondřej Mirtes](https://twitter.com/ondrejmirtes), author of PHPStan, for his help.
+Also thanks to [Matt Brown](https://twitter.com/mattbrowndev), author of Psalm, for actively making feedbacks.
+
+[Mention](https://mention.com) is awesome too! Thanks for letting me work on this. BTW, Mention is [hiring](https://mention.workable.com/).
+
+### Stay tuned
+
+Get informed as we progress on generics by following [me](htts://twitter.com/arnaud_lb), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
+
+[PHPStan]: https://github.com/phpstan/phpstan
+[playground]: https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76
+[^1]: Template types, or parameterized types
