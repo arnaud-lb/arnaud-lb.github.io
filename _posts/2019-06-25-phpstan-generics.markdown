@@ -15,7 +15,7 @@ Generic typing makes it possible to re-use the same piece of code with different
 
 The idea is to declare one or more types as _templates[^1]_ on a function or class. Then, use them as parameter types or return types. PHPStan will determine the real type of the templates by looking at the call site of the function, or the instantiation site of the class. It will then make sure that we use the right types consistently.
 
-In the following example, we declare one template type named `T`, and use it on one parameter and the return value. When calling `f()`, PHPStan determines the real type of `T` from the passed arguments. In this example, one effect of generic typing is that the return type of `f()` is known, so using the return value is safer. 
+In the following example, we declare one template type named `T`, and use it on one parameter and the return value. When calling `f()`, PHPStan determines the real type of `T` from the passed arguments. In this example, one effect of generic typing is that the return type of `f()` is known statically, so using the return value is safer. 
 
 ``` php
 <?php
@@ -43,12 +43,12 @@ If you install the master version of phpstan, or if you use the [playground][pla
 Current state in master:
 
 - Generic functions: done
+- Generic classes: done
+- class-string&lt;T&gt;: done
+- Prefixed annotations: done
 - Generic closures: WIP
-- Generic classes: WIP
 - non-classname bounds: WIP
-- class-string<T>, T::class: WIP
 - Variance: WIP
-- Prefixed annotations: WIP
 
 Get informed on the progress by following [@arnaud_lb](https://twitter.com/arnaud_lb) (me), [@ondrejmirtes](https://twitter.com/ondrejmirtes), and [@phpstan](https://twitter.com/phpstan) :)
 
@@ -128,7 +128,7 @@ function example($a, $b, $c, $d) {
 
 #### Propagation
 
-Template types propagate themselves when passing them from one generic code to an other generic code:
+Template types propagate themselves when passing them from one generic function to an other generic function:
 
 ``` php
 <?php
@@ -152,7 +152,7 @@ function g($x) {
 }
 ```
 
-#### class-string&lt;T&gt;, T::class
+#### class-string&lt;T&gt;
 
 Generic typing can also work with string class names, like this:
 
@@ -162,10 +162,11 @@ Generic typing can also work with string class names, like this:
 
 /**
  * @template T
- * @param T::class $className
+ * @param class-string<T> $className
  * @return T
  */
 function instance(string $className) {
+    // Returns a T
     return new $className();
 
     // This is also allowed:
@@ -173,18 +174,18 @@ function instance(string $className) {
     if ($object instanceof $className) {
         return $object;
     }
-
-    // This, too, is allowed:
-    $myClassName = 'DateTime';
-    if (is_subclass_of($myClassName, $className)) {
-        return new $myClassName;
-    }
 }
 
 instance("DateTime"); // returns a DateTime
 ```
 
-> Note: Implementation of this feature is in progress
+{::comment}
+    // This, too, is allowed:
+    $myClassName = 'DateTime';
+    if (is_subclass_of($myClassName, $className)) {
+        return new $myClassName;
+    }
+{:/comment}
 
 #### Classes
 
@@ -196,22 +197,24 @@ PHPStan determines the real type of the templates by looking at the instantiatio
 ``` php
 <?php
 
-/** @template T */
+/**
+ * @template E The type of elements in this collection
+ */
 class Collection {
-    /** @var array<int,T> */
+    /** @var array<int,E> */
     private $elements;
 
-    /** @param array<T> $elements */
+    /** @param array<E> $elements */
     public function __construct(array $elements) {
         $this->elements = $elements;
     }
 
-    /** @param T $element */
+    /** @param E $element */
     public function add($element) {
         $this->elements[] = $element;
     }
 
-    /** @return T */
+    /** @return E */
     public function get(int $index) {
         if (!isset($this->elements[$index])) {
             throw new OutOfBoundsException();
@@ -225,8 +228,6 @@ $coll->add(4);
 $coll->add(""); // Error
 $coll->get(0); // int
 ```
-
-> Note: Implementation of this feature is in progress
 
 #### Interfaces, inheritance
 
@@ -267,8 +268,6 @@ $coll = new ArrayCollection([1,2,3]);
 
 first($coll); // int
 ```
-
-> Note: Implementation of this feature is in progress
 
 {::comment}
 #### Variance
@@ -392,11 +391,11 @@ There are ways for a type system to allow variance selectively; this is a planne
 <?php
 
 /**
- * @template K The key type
- * @template V The input value type
+ * @template K  The key type
+ * @template V  The input value type
  * @template V2 The output value type
  *
- * @param iterable<K, V> $iterable
+ * @param iterable<K, V>  $iterable
  * @param callable(V): V2 $callback
  *
  * @return array<K, V2>
@@ -410,7 +409,7 @@ function map($iterable, $callback) {
 }
 ```
 
-Try it [here](https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76).
+Try it [here](https://phpstan.org/r/17b922f3-8e0c-4184-aa2f-e20fff48f3c8).
 
 #### reduce()
 
@@ -418,12 +417,12 @@ Try it [here](https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76).
 <?php
 
 /**
- * @template V The input value type
+ * @template V  The input value type
  * @template V2 The output value type
  *
- * @param iterable<V> $iterable
+ * @param iterable<V>         $iterable
  * @param callable(V2, V): V2 $callback
- * @param V2 $initial
+ * @param V2                  $initial
  *
  * @return V2
  */
@@ -436,7 +435,7 @@ function reduce($iterable, $callback, $initial) {
 }
 ```
 
-Try it [here](https://phpstan.org/r/404f20ed-ce1f-4e87-bdad-2385668d569b).
+Try it [here](https://phpstan.org/r/56fa33f4-b65e-4deb-bc38-e3e5e3883f79).
 
 #### first()
 
@@ -446,7 +445,7 @@ Try it [here](https://phpstan.org/r/404f20ed-ce1f-4e87-bdad-2385668d569b).
 /**
  * @template V The input value type
  *
- * @param iterable<V> $iterable
+ * @param iterable<V>       $iterable
  * @param callable(V): bool $callback
  *
  * @return V|null
@@ -461,7 +460,7 @@ function first($iterable, $callback) {
 }
 ```
 
-Try it [here](https://phpstan.org/r/954e1c55-a5e6-498a-9b05-37f7cde64783).
+Try it [here](https://phpstan.org/r/d8be1877-f21b-4711-9a75-a17ccd8b0032).
 
 ### Acknowlegements
 
@@ -477,4 +476,4 @@ Get informed as we progress on generics by following [@arnaud_lb](https://twitte
 
 [PHPStan]: https://github.com/phpstan/phpstan
 [playground]: https://phpstan.org/r/334e6f64-ff6e-4ac1-8558-d1adb1ef4f76
-[^1]: Template types, or parameterized types
+[^1]: Template types, or type variables
